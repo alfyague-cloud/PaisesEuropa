@@ -1,0 +1,860 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Capitales de Europa · Juego familiar</title>
+<style>
+:root{
+  --bg:#f3f6fb; --card:#ffffff; --ink:#1c2540; --muted:#66708a; --line:#dde3ef;
+  --accent:#2f6fed; --ok:#1e9e5a; --ko:#d8433b; --okbg:#e2f6ea; --kobg:#fde7e5;
+  --sea:#d6e6f5; --land:#e9e6dc; --eu:#fbf7ea; --border:#9aa3b5;
+}
+@media (prefers-color-scheme: dark){
+  :root{ --bg:#10141f; --card:#1a2030; --ink:#eef1f8; --muted:#9aa4bd; --line:#2c3449;
+    --accent:#6b9bff; --ok:#4fd08a; --ko:#ff7a72; --okbg:#173526; --kobg:#3d1e1c;
+    --sea:#172334; --land:#262c3a; --eu:#3a4257; --border:#6a748c; }
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg) linear-gradient(160deg,color-mix(in srgb,#2f6fed 14%,var(--bg)),color-mix(in srgb,#b245d6 10%,var(--bg)) 55%,color-mix(in srgb,#e0a100 14%,var(--bg))) fixed;color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  min-height:100vh;display:flex;justify-content:center;padding:16px}
+main{width:100%;max-width:1280px}
+#setup,#end{max-width:820px;margin:0 auto}
+h1{font-size:clamp(1.5rem,4vw,2.2rem);margin:.1em 0;text-align:center}
+.sub{text-align:center;color:var(--muted);margin:0 0 16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;margin-bottom:14px}
+h2{font-size:1.05rem;margin:0 0 12px}
+.hidden{display:none!important}
+button{font:inherit;color:inherit;cursor:pointer;border-radius:12px;border:1px solid var(--line);background:var(--card);padding:10px 14px}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.primary{background:var(--accent);color:#fff;border-color:transparent;font-weight:700;font-size:1.15rem;padding:14px 22px;width:100%}
+.primary:disabled{opacity:.5;cursor:wait}
+input[type=text],select{font:inherit;color:inherit;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px;min-width:0}
+.prow{display:flex;gap:8px;margin-bottom:8px;align-items:center}
+.prow .dot{width:14px;height:14px;border-radius:50%;flex:none}
+.prow input{flex:1}
+.prow .del{flex:none;padding:8px 12px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chips label{border:1px solid var(--line);border-radius:999px;padding:8px 14px;cursor:pointer;user-select:none}
+.chips input{position:absolute;opacity:0;pointer-events:none}
+.chips label:has(input:checked){background:var(--accent);color:#fff;border-color:transparent}
+.chips label:has(input:focus-visible){outline:3px solid var(--accent);outline-offset:2px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:640px){.grid2{grid-template-columns:1fr}}
+.err{color:var(--ko);margin:8px 0 0;min-height:1.2em}
+.hint{color:var(--muted);font-size:.9rem;margin:10px 0 0}
+
+.scores{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.sc{flex:1 1 110px;border:2px solid var(--line);border-radius:14px;padding:6px 12px;background:var(--card);
+  display:flex;justify-content:space-between;align-items:center;gap:8px}
+.sc.on{border-color:var(--pc);box-shadow:0 0 0 3px color-mix(in srgb,var(--pc) 25%,transparent)}
+.sc b{font-size:1.25rem}
+.sc span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.play{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(280px,1fr);gap:14px;align-items:start}
+@media (max-width:900px){
+  body{padding:10px}
+  .play{grid-template-columns:1fr}
+  #qcard{order:-1}
+  h1{font-size:1.3rem}
+  .ask{margin-top:10px}
+  .sc{flex-basis:90px;padding:4px 10px}
+}
+.mapwrap{padding:0;overflow:hidden;position:relative}
+#map{display:block;width:100%;height:auto;background:var(--sea);touch-action:none;cursor:crosshair}
+#map path{stroke:var(--border);stroke-width:.6;vector-effect:non-scaling-stroke}
+#map .land{fill:var(--land)}
+#map .eu{fill:var(--eu)}
+#map.pick .eu:hover{fill:color-mix(in srgb,var(--accent) 30%,var(--eu))}
+#map .eu.ask{fill:var(--pc);stroke:var(--ink);stroke-width:1.4}
+#map .eu.good{fill:var(--ok)}
+#map .eu.miss{fill:#f0b429}
+#map .eu.bad{fill:var(--ko)}
+#map .lbl{font-weight:800;fill:var(--ink);stroke:var(--card);stroke-width:4;paint-order:stroke;stroke-linejoin:round;text-anchor:middle;pointer-events:none}
+#map .marks *{pointer-events:none}
+.zoomhint{position:absolute;left:10px;bottom:8px;font-size:.8rem;color:var(--muted);background:color-mix(in srgb,var(--card) 80%,transparent);padding:2px 8px;border-radius:8px}
+.turn{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;color:var(--muted)}
+.turn strong{font-size:1.3rem;color:var(--pc)}
+.bar{height:8px;border-radius:99px;background:var(--line);overflow:hidden;margin:10px 0 0}
+.bar i{display:block;height:100%;width:100%;background:var(--accent);transform-origin:left}
+.ask{color:var(--muted);text-align:center;margin:18px 0 4px;font-size:1.05rem}
+.q{text-align:center;font-size:clamp(1.7rem,4vw,2.6rem);font-weight:800;margin:0 0 16px;line-height:1.15;text-wrap:balance}
+.ans{display:flex;gap:8px;flex-wrap:wrap}
+.ans input{flex:1 1 180px;font-size:1.3rem;padding:12px}
+.ans .primary{width:auto;flex:0 0 auto}
+/* Pantalla 2: el mapa ocupa casi toda la pantalla, con la pregunta dentro */
+.play.s2{display:block;position:relative}
+.play.s2 #map{height:calc(100dvh - 90px);min-height:280px}
+.play.s2 #qcard{display:none}
+.play.s2.done #qcard{display:block;position:absolute;bottom:22px;left:14px;width:330px;max-height:calc(100% - 50px);overflow:auto;margin:0;box-shadow:0 10px 30px rgba(0,0,0,.25);animation:rise .3s}
+.play.s2.done #qcard .ask,.play.s2.done #qcard .q,.play.s2.done #qcard .bar{display:none}
+.mapq{position:absolute;top:16px;left:50%;transform:translateX(-50%);max-width:calc(100% - 20px);text-align:center;pointer-events:none;
+  background:var(--card);border:1px solid var(--line);border-radius:14px;padding:8px 26px;font-weight:800;font-size:clamp(1.3rem,3.6vw,2.3rem);
+  box-shadow:0 4px 14px rgba(0,0,0,.15)}
+.play.s2.done .zoomhint{display:none}
+.bar2{position:absolute;top:0;left:0;right:0;margin:0;border-radius:0;height:6px}
+@media (max-width:900px){
+  .play.s2 #map{height:auto;min-height:0}
+  .mapwrap{display:flex;flex-direction:column}
+  .mapq{order:-1;position:static;transform:none;max-width:none;border:none;border-radius:0;box-shadow:none;font-size:1.35rem;padding:12px 8px 8px}
+  .play.s2.done #qcard{position:static;width:auto;max-height:none;margin-top:10px;box-shadow:none}
+}
+.code{font-family:ui-monospace,Consolas,monospace;font-size:1.8rem;letter-spacing:.2em;color:var(--accent);margin-left:8px}
+#code{text-transform:uppercase;letter-spacing:.15em}
+.roster{list-style:none;padding:0;margin:12px 0;display:flex;flex-wrap:wrap;gap:8px}
+.roster li{border:2px solid var(--pc);border-radius:999px;padding:6px 14px}
+.roster small{color:var(--muted)}
+.sc.gone{opacity:.45}
+.opts{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.play.s1{grid-template-columns:1fr;max-width:820px;margin:0 auto}
+.play.s1 .mapwrap,.play.s2 .opts{display:none}
+.opt{font-size:clamp(1rem,2.4vw,1.25rem);padding:14px 10px;min-height:58px;text-align:center;justify-content:center;display:flex;align-items:center;border-width:2px;overflow-wrap:anywhere}
+.opt kbd{flex:none;font:inherit;font-weight:700;width:1.9em;height:1.9em;border-radius:50%;background:var(--bg);display:grid;place-items:center;color:var(--muted)}
+.opt:not(:disabled):hover{border-color:var(--accent)}
+.opt:disabled{cursor:default;opacity:.55}
+.opt.good{background:var(--okbg);border-color:var(--ok);opacity:1}
+.opt.bad{background:var(--kobg);border-color:var(--ko);opacity:1}
+.fb{text-align:center;font-size:1.15rem;font-weight:700;min-height:1.6em;margin:14px 0 12px}
+.fb:empty,.roundres:empty{display:none}
+.roundres{list-style:none;padding:0;margin:12px 0;display:grid;gap:6px}
+.roundres li{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:center;border:1px solid var(--line);border-left:6px solid var(--pc);border-radius:12px;padding:9px 12px;
+  background:linear-gradient(90deg,color-mix(in srgb,var(--pc) 24%,transparent) var(--w),transparent var(--w));animation:rise .35s both}
+.roundres li:nth-child(2){animation-delay:.08s}.roundres li:nth-child(3){animation-delay:.16s}.roundres li:nth-child(n+4){animation-delay:.24s}
+.roundres .pos{font-size:1.3rem;min-width:1.6em;text-align:center}
+.roundres b{flex:1 1 auto;font-size:1.1rem}
+.roundres .y{color:var(--ok);font-weight:700} .roundres .n{color:var(--ko);font-weight:700}
+.roundres .gain{font-weight:800;color:var(--accent)}
+.roundres .p{font-weight:800;font-size:1.3rem;min-width:2em;text-align:right}
+.flag{height:1em;border-radius:4px;box-shadow:0 0 0 1px var(--line);vertical-align:-.12em;margin-right:.4em}
+.q .flag{display:block;height:72px;margin:0 auto 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.2)}
+.opt .flag{height:1.3em;flex:none}
+.opt{background:hsl(var(--h) 85% 93%);border-color:hsl(var(--h) 60% 72%);font-weight:600;transition:transform .12s}
+.opt:not(:disabled):hover{transform:scale(1.04);border-color:hsl(var(--h) 70% 45%)}
+.opt:active{transform:scale(.97)}
+#map .eu{fill:hsl(var(--h) 60% 80%)}
+.fb.good{animation:pop .45s} .fb.bad{animation:shake .4s}
+.q{animation:pop .35s}
+.cf{position:fixed;top:-16px;width:9px;height:15px;border-radius:2px;z-index:50;pointer-events:none;animation:fall linear forwards}
+@keyframes fall{to{transform:translateY(106vh) rotate(720deg)}}
+@keyframes pop{0%{transform:scale(.7);opacity:0}70%{transform:scale(1.08)}100%{transform:scale(1);opacity:1}}
+@keyframes shake{20%,60%{transform:translateX(-7px)}40%,80%{transform:translateX(7px)}}
+@keyframes rise{from{transform:translateY(12px);opacity:0}}
+@media (prefers-color-scheme: dark){
+  .opt{background:hsl(var(--h) 35% 22%);border-color:hsl(var(--h) 35% 40%)}
+  #map .eu{fill:hsl(var(--h) 32% 40%)}
+}
+@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+h1{background:linear-gradient(90deg,#e4572e,#b245d6,#2f6fed);-webkit-background-clip:text;background-clip:text;color:transparent}
+.sc{font-weight:600}.sc b{color:var(--pc)}
+.fb.good{color:var(--ok)} .fb.bad{color:var(--ko)} .fb.mid{color:#b07a00}
+.quit{display:block;margin:0 auto;border:none;background:none;color:var(--muted);text-decoration:underline}
+
+.prize{display:flex;gap:14px;align-items:center;margin:0 0 16px;padding:16px 18px;border-radius:16px;color:#3b2a00;
+  background:linear-gradient(120deg,#ffe58a,#ffc94d);border:2px dashed #c98a00;animation:pop .6s .3s both}
+.prize .gift{font-size:2.6rem;animation:shake 1.2s 1s 2}
+.prize small{display:block;font-size:.95rem}
+.prize strong{display:block;font-size:clamp(1.15rem,3.2vw,1.5rem);line-height:1.2}
+.pilon{margin:0 0 16px;border-radius:16px;overflow:hidden;border:1px solid var(--line);animation:pop .6s .5s both}
+.pilon img{display:block;width:100%;max-height:340px;object-fit:cover}
+.pilon figcaption{text-align:center;padding:8px;color:var(--muted);font-size:.95rem}
+.podium{list-style:none;padding:0;margin:0 0 16px}
+.podium li{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:14px;border:1px solid var(--line);margin-bottom:8px;font-size:1.15rem}
+.podium li.win{border:2px solid var(--pc);font-size:1.4rem;font-weight:800}
+.podium .pos{width:2em;text-align:center}
+.podium .pts{margin-left:auto;font-weight:800}
+.podium small{color:var(--muted);font-weight:400}
+</style>
+</head>
+<body>
+<main>
+  <h1><span style="color:#000">🌍</span> Capitales de Europa</h1>
+  <p class="sub" id="sub">Adivina y colócalas en el mapa</p>
+
+  <!-- CONFIGURACIÓN -->
+  <section id="setup">
+    <div class="card">
+      <h2>¿Cómo jugáis?</h2>
+      <div class="chips">
+        <label><input type="radio" name="play" value="local" checked>Por turnos, en un dispositivo</label>
+        <label><input type="radio" name="play" value="online">A la vez, cada uno con el suyo</label>
+      </div>
+    </div>
+    <div class="card hidden" id="cardOnline">
+      <div id="joinbox">
+        <h2>Tu jugador <small style="font-weight:400;color:var(--muted)">(el nivel de quien crea la sala es el de las preguntas)</small></h2>
+        <div class="prow">
+          <input type="text" id="myname" maxlength="14" placeholder="Tu nombre" aria-label="Tu nombre">
+          <select id="mylevel" aria-label="Tu nivel"><option value="1">Fácil</option><option value="2" selected>Medio</option><option value="3">Difícil</option></select>
+        </div>
+        <div class="grid2">
+          <button type="button" class="primary" id="create">Crear una sala</button>
+          <form class="ans" id="joinform" autocomplete="off">
+            <input type="text" id="code" maxlength="4" placeholder="Código" aria-label="Código de la sala" autocapitalize="characters" spellcheck="false">
+            <button class="primary" type="submit">Unirse</button>
+          </form>
+        </div>
+      </div>
+      <div id="lobby" class="hidden">
+        <h2>Sala <span id="roomcode" class="code"></span></h2>
+        <p class="hint" id="lobbyhint"></p>
+        <ul id="roster" class="roster"></ul>
+        <button type="button" id="copy">Copiar enlace de la sala</button>
+        <button type="button" id="leave">Salir de la sala</button>
+      </div>
+      <p class="err" id="neterr" role="alert"></p>
+    </div>
+    <div class="card" id="cardPlayers">
+      <h2>Jugadores (cada uno con su nivel)</h2>
+      <div id="players"></div>
+      <button id="add" type="button">+ Añadir jugador</button>
+    </div>
+    <div id="settings">
+    <div class="card">
+      <h2>¿A qué jugamos?</h2>
+      <div class="chips">
+        <label><input type="radio" name="mode" value="cap">Adivina la capital del país</label>
+        <label><input type="radio" name="mode" value="pais">Adivina el país de la capital</label>
+        <label><input type="radio" name="mode" value="mix" checked>Mezclado</label>
+      </div>
+      <p class="hint">Cada pregunta tiene dos pantallas: en la primera eliges la respuesta entre 10 opciones (2 puntos si aciertas) y en la segunda sitúas el país en el mapa (1 punto más).</p>
+    </div>
+    <div class="grid2">
+      <div class="card">
+        <h2>Preguntas por jugador</h2>
+        <div class="chips">
+          <label><input type="radio" name="rounds" value="5">5</label>
+          <label><input type="radio" name="rounds" value="10" checked>10</label>
+          <label><input type="radio" name="rounds" value="15">15</label>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Tiempo para responder</h2>
+        <div class="chips">
+          <label><input type="radio" name="time" value="0">Sin límite</label>
+          <label><input type="radio" name="time" value="30" checked>30 s</label>
+          <label><input type="radio" name="time" value="15">15 s</label>
+        </div>
+      </div>
+    </div>
+    </div>
+    <button class="primary" id="start" type="button" disabled>Cargando el mapa…</button>
+    <p class="err" id="err" role="alert"></p>
+  </section>
+
+  <!-- PARTIDA -->
+  <section id="game" class="hidden">
+    <div class="scores" id="scores"></div>
+    <div class="play s1" id="play">
+      <div class="card mapwrap">
+        <svg id="map" viewBox="0 0 800 680" role="img" aria-label="Mapa de Europa"></svg>
+        <div class="bar bar2" id="bar2"><i id="barfill2"></i></div>
+        <div class="mapq" id="mapq" aria-live="polite"></div>
+        <span class="zoomhint">Rueda o pellizco para acercar</span>
+      </div>
+      <div class="card" id="qcard">
+        <div class="turn"><span><span id="wholbl">Turno de</span> <strong id="who"></strong></span><span id="prog"></span></div>
+        <div class="bar" id="bar"><i id="barfill"></i></div>
+        <p class="ask" id="ask"></p>
+        <p class="q" id="q"></p>
+        <div class="opts" id="opts"></div>
+        <p class="fb" id="fb1" aria-live="polite"></p>
+        <p class="fb" id="fb" aria-live="polite"></p>
+        <ul class="roundres" id="round" aria-live="polite"></ul>
+        <button class="primary hidden" id="next" type="button">Siguiente</button>
+        <p class="hint hidden" id="wait" style="text-align:center"></p>
+      </div>
+    </div>
+    <button class="quit" id="quit" type="button">Terminar la partida</button>
+  </section>
+
+  <!-- FINAL -->
+  <section id="end" class="hidden">
+    <div class="card">
+      <h2 id="winner" style="font-size:1.5rem;text-align:center"></h2>
+      <div class="prize"><span class="gift">🎁</span><div><small>Premio para <b id="prizewho"></b></small><strong>¡Un baño en el pilón! 💦🩱</strong></div></div>
+      <!-- Foto del pilón: basta con guardar la imagen como pilon.jpg junto a index.html -->
+      <figure class="pilon"><img src="pilon.jpg" alt="El pilón" onerror="this.parentNode.remove()"><figcaption>El pilón te espera</figcaption></figure>
+      <ol class="podium" id="podium"></ol>
+      <button class="primary" id="again" type="button">Jugar otra vez</button>
+    </div>
+  </section>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js"></script>
+<script>
+// País|Capital|código ISO numérico|latitud|longitud|nivel (1 fácil, 2 medio, 3 difícil)|p = país pequeño
+const RAW = `
+España|Madrid|724|40.42|-3.70|1
+Portugal|Lisboa|620|38.72|-9.14|1
+Francia|París|250|48.86|2.35|1
+Italia|Roma|380|41.90|12.50|1
+Alemania|Berlín|276|52.52|13.40|1
+Reino Unido|Londres|826|51.51|-0.13|1
+Irlanda|Dublín|372|53.35|-6.26|1
+Grecia|Atenas|300|37.98|23.73|1
+Rusia|Moscú|643|55.76|37.62|1
+Suecia|Estocolmo|752|59.33|18.07|1
+Noruega|Oslo|578|59.91|10.75|1
+Polonia|Varsovia|616|52.23|21.01|1
+Bélgica|Bruselas|056|50.85|4.35|1
+Austria|Viena|040|48.21|16.37|1
+Dinamarca|Copenhague|208|55.68|12.57|1
+Países Bajos|Ámsterdam|528|52.37|4.90|2
+Suiza|Berna|756|46.95|7.45|2
+Finlandia|Helsinki|246|60.17|24.94|2
+Islandia|Reikiavik|352|64.15|-21.94|2
+Chequia|Praga|203|50.08|14.44|2
+Hungría|Budapest|348|47.50|19.04|2
+Rumanía|Bucarest|642|44.43|26.10|2
+Bulgaria|Sofía|100|42.70|23.32|2
+Croacia|Zagreb|191|45.81|15.98|2
+Ucrania|Kiev|804|50.45|30.52|2
+Serbia|Belgrado|688|44.79|20.45|2
+Andorra|Andorra la Vella|020|42.51|1.52|2|p
+Luxemburgo|Luxemburgo|442|49.61|6.13|2|p
+Eslovaquia|Bratislava|703|48.15|17.11|3
+Eslovenia|Liubliana|705|46.06|14.51|3
+Bosnia y Herzegovina|Sarajevo|070|43.86|18.41|3
+Montenegro|Podgorica|499|42.44|19.26|3|p
+Macedonia del Norte|Skopie|807|42.00|21.43|3
+Albania|Tirana|008|41.33|19.82|3
+Bielorrusia|Minsk|112|53.90|27.57|3
+Estonia|Tallin|233|59.44|24.75|3
+Letonia|Riga|428|56.95|24.11|3
+Lituania|Vilna|440|54.69|25.28|3
+Moldavia|Chisináu|498|47.01|28.86|3
+Malta|La Valeta|470|35.90|14.51|3|p
+Chipre|Nicosia|196|35.17|33.36|3|p
+Liechtenstein|Vaduz|438|47.14|9.52|3|p
+Mónaco|Mónaco|492|43.73|7.42|3|p
+San Marino|San Marino|674|43.94|12.45|3|p`;
+
+const EU = RAW.trim().split('\n').map(l => {
+  const [pais, capital, id, lat, lon, nivel, p] = l.split('|');
+  return { pais, capital, id, ll: [+lon, +lat], nivel: +nivel, small: p === 'p' };
+});
+const BYID = new Map(EU.map(d => [d.id, d]));
+const LEVELS = { 1:'Fácil', 2:'Medio', 3:'Difícil' };
+const COLORS = ['#e4572e','#2f6fed','#1e9e5a','#b245d6','#e0a100','#0fa3b1','#d6336c','#6b7a1f'];
+const AV = ['🦊','🐼','🦁','🐸','🐙','🦉','🦄','🐢'];
+// Código de dos letras de cada país, para su bandera (imágenes de flagcdn.com)
+const ISO = { 724:'es',620:'pt',250:'fr',380:'it',276:'de',826:'gb',372:'ie',300:'gr',643:'ru',752:'se',578:'no',616:'pl','056':'be','040':'at',208:'dk',
+  528:'nl',756:'ch',246:'fi',352:'is',203:'cz',348:'hu',642:'ro',100:'bg',191:'hr',804:'ua',688:'rs','020':'ad',442:'lu',703:'sk',705:'si','070':'ba',
+  499:'me',807:'mk','008':'al',112:'by',233:'ee',428:'lv',440:'lt',498:'md',470:'mt',196:'cy',438:'li',492:'mc',674:'sm' };
+const flag = d => `<img class="flag" src="https://flagcdn.com/w160/${ISO[d.id]}.png" alt="">`;
+const MAXP = 6, W = 800, H = 680;
+const $ = id => document.getElementById(id);
+const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const esc = s => s.replace(/[&<>"]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]));
+
+/* ---------- Mapa ---------- */
+let svg, gMap, gMarks, projection, zoom;
+async function loadMap() {
+  const world = await d3.json('https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/countries-50m.json');
+  const feats = topojson.feature(world, world.objects.countries).features.filter(f => {
+    if (BYID.has(f.id)) return true;
+    const [lon, lat] = d3.geoCentroid(f);
+    return lon > -35 && lon < 75 && lat > 22 && lat < 82;
+  });
+  // Encuadre: de Islandia a Moscú y del cabo Norte a Chipre
+  const frame = [[-24.5,65],[-9.6,36.8],[14.5,35.6],[34.6,34.5],[42,56],[27,71.3],[10,71.3]];
+  projection = d3.geoConicConformal().rotate([-12, 0]).parallels([40, 62]).scale(1).translate([0, 0]);
+  const fp = frame.map(projection), fx = d3.extent(fp, p => p[0]), fy = d3.extent(fp, p => p[1]);
+  const s = Math.min((W - 20) / (fx[1] - fx[0]), (H - 20) / (fy[1] - fy[0]));
+  projection.scale(s).translate([(W - s * (fx[0] + fx[1])) / 2, (H - s * (fy[0] + fy[1])) / 2])
+    .clipExtent([[-W, -H], [2 * W, 2 * H]]);
+  const path = d3.geoPath(projection);
+  svg = d3.select('#map');
+  gMap = svg.append('g');
+  gMap.append('g').selectAll('path').data(feats).join('path')
+    .attr('d', path).attr('class', f => BYID.has(f.id) ? 'eu' : 'land').attr('id', f => BYID.has(f.id) ? 'c' + f.id : null)
+    .style('--h', f => BYID.has(f.id) ? (EU.indexOf(BYID.get(f.id)) * 47) % 360 : null);
+  gMarks = gMap.append('g').attr('class', 'marks');
+  zoom = d3.zoom().scaleExtent([1, 8]).translateExtent([[0, 0], [W, H]]).on('zoom', e => gMap.attr('transform', e.transform));
+  svg.call(zoom).on('dblclick.zoom', null).on('click', onMapClick);
+}
+const xy = d => projection(d.ll);
+const zk = () => d3.zoomTransform(svg.node()).k;
+function dot(p, color, r = 6) {
+  const k = zk();
+  gMarks.append('circle').attr('cx', p[0]).attr('cy', p[1]).attr('r', r / k).attr('fill', color).attr('stroke', '#fff').attr('stroke-width', 2 / k);
+}
+function ring(p, color) {
+  const k = zk();
+  gMarks.append('circle').attr('cx', p[0]).attr('cy', p[1]).attr('r', 13 / k).attr('fill', 'none').attr('stroke', color).attr('stroke-width', 3 / k);
+}
+function label(p, text) {
+  const k = zk();
+  gMarks.append('text').attr('class', 'lbl').attr('x', p[0]).attr('y', p[1] - 12 / k)
+    .attr('font-size', 15 / k).attr('stroke-width', 4 / k).text(text);
+}
+function clearMap() {
+  gMarks.selectAll('*').remove();
+  gMap.selectAll('.eu').attr('class', 'eu');
+  svg.call(zoom.transform, d3.zoomIdentity);
+}
+
+/* ---------- Configuración ---------- */
+function addPlayerRow(name = '', level = 2) {
+  const box = $('players');
+  if (box.children.length >= MAXP) return;
+  const row = document.createElement('div');
+  row.className = 'prow';
+  row.innerHTML = `<i class="dot"></i>
+    <input type="text" maxlength="14" placeholder="Nombre" aria-label="Nombre del jugador" value="${esc(name)}">
+    <select aria-label="Nivel">${Object.entries(LEVELS).map(([v, t]) => `<option value="${v}"${+v === level ? ' selected' : ''}>${t}</option>`).join('')}</select>
+    <button type="button" class="del" aria-label="Quitar jugador">✕</button>`;
+  row.querySelector('.del').onclick = () => { if (box.children.length > 1) { row.remove(); paintRows(); } };
+  box.appendChild(row);
+  paintRows();
+}
+function paintRows() {
+  [...$('players').children].forEach((r, i) => r.querySelector('.dot').style.background = COLORS[i]);
+  $('add').classList.toggle('hidden', $('players').children.length >= MAXP);
+}
+$('add').onclick = () => { addPlayerRow(); $('players').lastElementChild.querySelector('input').focus(); };
+
+let saved = null;
+try { saved = JSON.parse(localStorage.getItem('capitales-jugadores')); } catch (e) {}
+if (Array.isArray(saved) && saved.length) saved.slice(0, MAXP).forEach(p => addPlayerRow(String(p.name || ''), +p.level || 2));
+else { addPlayerRow('', 2); addPlayerRow('', 2); }
+
+loadMap().then(() => { $('start').disabled = false; $('start').textContent = '¡A jugar!'; })
+  .catch(() => { $('start').textContent = 'Mapa no disponible'; $('err').textContent = 'No se ha podido cargar el mapa. Comprueba la conexión a internet y recarga la página.'; });
+
+/* ---------- Partida ---------- */
+let G = null;
+const radio = n => document.querySelector(`input[name=${n}]:checked`).value;
+
+$('start').onclick = () => {
+  if (NET) return startOnline();
+  const players = [...$('players').children].map((r, i) => ({
+    name: r.querySelector('input').value.trim() || `Jugador ${i + 1}`,
+    level: +r.querySelector('select').value, color: COLORS[i], av: AV[i], score: 0
+  }));
+  try { localStorage.setItem('capitales-jugadores', JSON.stringify(players.map(p => ({ name: p.name, level: p.level })))); } catch (e) {}
+  G = { players, mode: radio('mode'), rounds: +radio('rounds'), time: +radio('time'),
+        round: 1, turn: 0, used: new Set(), answered: true, timer: null, cur: null };
+  show('game');
+  nextQuestion();
+};
+
+function show(id) {
+  ['setup', 'game', 'end'].forEach(s => $(s).classList.toggle('hidden', s !== id));
+  $('sub').classList.toggle('hidden', id === 'game');
+  window.scrollTo(0, 0);
+}
+
+function pickQuestion(p) {
+  const pool = EU.filter(d => d.nivel <= p.level);
+  let fresh = pool.filter(d => !G.used.has(d.id));
+  if (!fresh.length) { pool.forEach(d => G.used.delete(d.id)); fresh = pool; }
+  const item = fresh[Math.floor(Math.random() * fresh.length)];
+  G.used.add(item.id);
+  const type = G.mode === 'mix' ? (Math.random() < .5 ? 'cap' : 'pais') : G.mode;
+  return { item, type };
+}
+
+function renderScores() {
+  $('scores').innerHTML = G.players.map((p, i) =>
+    `<div class="sc${i === G.turn ? ' on' : ''}${p.gone ? ' gone' : ''}" style="--pc:${p.color}"><span>${p.done ? '✓ ' : ''}${p.av} ${esc(p.name)}</span><b>${p.score}</b></div>`).join('');
+}
+
+function nextQuestion(given) {
+  const p = G.players[G.turn];
+  const c = G.cur = given || pickQuestion(p);
+  G.answered = false; G.qpts = 0; G.qa = false; G.qm = false;
+  $('round').innerHTML = '';
+  $('wholbl').textContent = G.net ? 'Juegas tú,' : 'Turno de';
+  $('wait').classList.add('hidden');
+  renderScores();
+  clearMap();
+  $('qcard').style.setProperty('--pc', p.color);
+  $('map').style.setProperty('--pc', p.color);
+  $('map').classList.remove('pick');
+  $('who').textContent = p.name;
+  $('prog').textContent = `Pregunta ${G.round} de ${G.rounds}`;
+  $('ask').textContent = c.type === 'cap' ? '1 · ¿Cuál es la capital de…?' : '1 · ¿De qué país es capital…?';
+  $('q').innerHTML = c.type === 'cap' ? flag(c.item) + esc(c.item.pais) : esc(c.item.capital);
+  // Pantalla 1: diez opciones (la correcta y nueve del nivel del jugador)
+  const key = c.type === 'cap' ? 'capital' : 'pais';
+  const others = shuffle(EU.filter(d => d !== c.item && d.nivel <= p.level)).slice(0, 9);
+  const list = c.opts ? c.opts.map(id => BYID.get(id)) : shuffle([c.item, ...others]);   // en sala, las mismas para todos
+  $('opts').innerHTML = list.map((d, i) => `<button type="button" class="opt" style="--h:${i * 36}" data-v="${esc(d[key])}">${key === 'pais' ? flag(d) : ''}${esc(d[key])}</button>`).join('');
+  [...$('opts').children].forEach(b => b.onclick = () => submitWrite(b.dataset.v));
+  $('play').className = 'play s1';
+  $('fb1').textContent = ''; $('fb1').className = 'fb';
+  $('fb').textContent = ''; $('fb').className = 'fb';
+  $('next').classList.add('hidden');
+  G.step = 'write';
+  window.scrollTo(0, 0);
+  startTimer(() => submitWrite(null));
+}
+
+function startTimer(onTime) {
+  clearTimeout(G.timer);
+  $('bar').classList.toggle('hidden', !G.time);
+  $('bar2').classList.toggle('hidden', !G.time);
+  if (!G.time) return;
+  for (const fill of [$('barfill'), $('barfill2')]) {
+    fill.style.transition = 'none'; fill.style.transform = 'scaleX(1)';
+    void fill.offsetWidth;
+    fill.style.transition = `transform ${G.time}s linear`; fill.style.transform = 'scaleX(0)';
+  }
+  G.timer = setTimeout(onTime, G.time * 1000);
+}
+
+/* Pantalla 1: elegir la respuesta (v = opción pulsada, o null si se acaba el tiempo) */
+function submitWrite(v) {
+  if (!G || G.step !== 'write') return;
+  const c = G.cur, expected = c.type === 'cap' ? c.item.capital : c.item.pais;
+  const ok = v === expected;
+  G.qa = ok;
+  if (ok) { G.players[G.turn].score += 2; G.qpts += 2; }
+  const fact = `${c.item.capital} es la capital de ${c.item.pais}.`;
+  clearTimeout(G.timer);
+  [...$('opts').children].forEach(b => {
+    b.disabled = true;
+    if (b.dataset.v === expected) b.classList.add('good'); else if (b.dataset.v === v) b.classList.add('bad');
+  });
+  $('fb1').textContent = ok ? `¡Correcto! ${fact} +2 puntos` : `${v === null ? '¡Tiempo!' : 'No…'} ${fact}`;
+  $('fb1').className = 'fb ' + (ok ? 'good' : 'bad');
+  renderScores();
+  G.step = 'wait';   // un momento para ver el acierto o el fallo antes de pasar al mapa
+  setTimeout(() => {
+    if (!G || G.cur !== c || G.step !== 'wait') return;
+    G.step = 'map';
+    $('play').className = 'play s2';   // Pantalla 2: solo el mapa con la pregunta dentro
+    $('mapq').textContent = `¿Dónde está ${c.item.pais}?`;
+    $('mapq').classList.remove('hidden');
+    $('map').classList.add('pick');
+    $('map').scrollIntoView({ behavior: 'smooth', block: 'end' });
+    startTimer(() => finishAnswer(0, 'bad', '¡Tiempo!'));
+  }, 1200);
+}
+
+/* Paso 2: situar el país en el mapa */
+function onMapClick(e) {
+  if (!G || G.step !== 'map') return;
+  const c = G.cur, pt = d3.pointer(e, gMap.node()), target = xy(c.item), k = zk();
+  const near = Math.hypot(pt[0] - target[0], pt[1] - target[1]);
+  const f = d3.select(e.target).datum();
+  const hit = f && BYID.get(f.id);
+  if (hit === c.item || (c.item.small && near < 18 / k)) return finishAnswer(1, 'good', '¡Bien situado!');
+  if (!hit) { $('fb').className = 'fb'; $('fb').textContent = 'Pulsa sobre un país de Europa.'; return; }
+  d3.select('#c' + hit.id).classed('bad', true);
+  finishAnswer(0, 'bad', `Eso es ${hit.pais}.`);
+}
+
+function finishAnswer(pts, cls, msg) {
+  if (G.answered) return;
+  G.answered = true; G.step = 'done';
+  clearTimeout(G.timer);
+  for (const fill of [$('barfill'), $('barfill2')]) { fill.style.transform = getComputedStyle(fill).transform; fill.style.transition = 'none'; }
+  $('play').classList.add('done');
+  $('mapq').classList.add('hidden');
+  const c = G.cur;
+  G.players[G.turn].score += pts; G.qpts += pts; G.qm = pts > 0;
+  $('map').classList.remove('pick');
+  d3.select('#c' + c.item.id).classed('ask', false).classed(cls === 'good' ? 'good' : 'miss', true);
+  dot(xy(c.item), 'var(--ink)');
+  label(xy(c.item), `${c.item.capital} · ${c.item.pais}`);
+  $('fb').textContent = `${msg} ${pts ? '+1 punto' : 'Mira dónde está.'}`;
+  $('fb').className = 'fb ' + cls;
+  renderScores();
+  if (G.net) onlineDone();
+  else {
+    ranking(G.players, false);
+    const last = G.round === G.rounds && G.turn === G.players.length - 1;
+    $('next').textContent = last ? 'Ver resultados' : 'Siguiente';
+    $('next').classList.remove('hidden');
+    $('next').focus({ preventScroll: true });
+  }
+  const cur = c;
+  setTimeout(() => { if (G && G.cur === cur && G.step === 'done') reveal($('fb'), 'center'); }, 1200);
+}
+// En pantallas estrechas (móvil) la pregunta va arriba y el mapa debajo: desplaza hasta lo que toca
+function reveal(el, block) {
+  if (window.matchMedia('(max-width:900px)').matches) el.scrollIntoView({ behavior: 'smooth', block });
+}
+
+$('next').onclick = () => {
+  if (G.net) { if (NET && NET.role === 'host') hostContinue(); return; }
+  if (++G.turn >= G.players.length) { G.turn = 0; G.round++; }
+  if (G.round > G.rounds) finish(); else nextQuestion();
+};
+$('quit').onclick = () => {
+  if (G.net) { if (confirm('¿Salir de la sala?')) { leaveRoom(); show('setup'); } return; }
+  if (confirm('¿Terminar la partida y ver los resultados?')) { clearTimeout(G.timer); G.answered = true; G.step = 'done'; finish(); }
+};
+
+function finish() {
+  const rank = [...G.players].sort((a, b) => b.score - a.score);
+  const top = rank[0].score;
+  const winners = rank.filter(p => p.score === top);
+  $('winner').textContent = G.players.length === 1 ? `${rank[0].name}: ${top} puntos`
+    : winners.length > 1 ? `🤝 ¡Empate entre ${winners.map(p => p.name).join(' y ')}!`
+    : `🏆 ¡Gana ${winners[0].name}!`;
+  $('prizewho').textContent = winners.map(p => p.name).join(' y ');
+  const medals = ['🥇', '🥈', '🥉'];
+  let pos = 0;
+  $('podium').innerHTML = rank.map((p, i) => {
+    if (i && p.score < rank[i - 1].score) pos = i;
+    return `<li class="${p.score === top ? 'win' : ''}" style="--pc:${p.color}"><span class="pos">${medals[pos] || pos + 1}</span>
+      <span>${p.av} ${esc(p.name)}${G.net ? '' : ` <small>· ${LEVELS[p.level]}</small>`}</span><span class="pts">${p.score}</span></li>`;
+  }).join('');
+  show('end');
+  confetti(140);
+}
+$('again').onclick = () => { if (NET) leaveRoom(); show('setup'); };
+
+/* ---------- Modo simultáneo: sala en línea (PeerJS) ----------
+   Quien crea la sala hace de anfitrión: reparte las preguntas y lleva el marcador.
+   Cada dispositivo responde su pregunta (según su nivel) y envía los puntos. */
+let NET = null;
+const ROOM = 'capitales-europa-';
+const netErr = t => { $('neterr').textContent = t; };
+const playMode = () => radio('play');
+
+function setupUI() {
+  const online = playMode() === 'online', inRoom = !!NET && NET.ready, host = inRoom && NET.role === 'host';
+  $('cardOnline').classList.toggle('hidden', !online);
+  $('cardPlayers').classList.toggle('hidden', online);
+  $('joinbox').classList.toggle('hidden', inRoom);
+  $('lobby').classList.toggle('hidden', !inRoom);
+  $('settings').classList.toggle('hidden', online && !host);
+  $('start').classList.toggle('hidden', online && !host);
+  if (!$('start').disabled) $('start').textContent = host ? 'Empezar la partida' : '¡A jugar!';
+  if (inRoom) {
+    $('roomcode').textContent = NET.code;
+    const lv = NET.roster[0] ? LEVELS[NET.roster[0].level] : '';
+    $('lobbyhint').textContent = (host ? 'Dad el código (o el enlace) a los demás. Cuando estéis todos, pulsa «Empezar la partida».'
+                                       : 'Ya estás dentro. Esperando a que empiece la partida…')
+      + ` Las preguntas son las mismas para todos, de nivel «${lv}».`;
+    $('roster').innerHTML = NET.roster.map((r, i) => `<li style="--pc:${COLORS[i % COLORS.length]}">${AV[i % AV.length]} ${esc(r.name)}${i ? '' : ' <small>· crea la sala</small>'}</li>`).join('');
+    $('copy').classList.toggle('hidden', !host);
+  }
+}
+document.querySelectorAll('input[name=play]').forEach(r => r.onchange = () => { if (NET) leaveRoom(); netErr(''); setupUI(); });
+
+function me() {
+  const name = $('myname').value.trim().slice(0, 14) || 'Jugador', level = +$('mylevel').value;
+  try { localStorage.setItem('capitales-yo', JSON.stringify({ name, level })); } catch (e) {}
+  return { name, level };
+}
+function leaveRoom() {
+  if (!NET) return;
+  const n = NET; NET = null;
+  clearTimeout(n.adv);
+  try { n.peer.destroy(); } catch (e) {}
+  if (G && G.net) { clearTimeout(G.timer); G = null; }
+  setupUI();
+}
+function netFail(text) { leaveRoom(); show('setup'); netErr(text); }
+const broadcast = m => NET.conns.forEach(c => { if (c.open) c.send(m); });
+
+$('create').onclick = () => {
+  if (NET) return;
+  if (typeof Peer === 'undefined') return netErr('No se ha podido cargar el módulo de conexión. Comprueba internet y recarga.');
+  netErr('Creando la sala…');
+  const code = Array.from({ length: 4 }, () => 'ABCDEFGHJKLMNPRSTUVWXYZ'[Math.floor(Math.random() * 23)]).join('');
+  const peer = new Peer(ROOM + code);
+  NET = { role: 'host', peer, code, conns: new Map(), myId: 'host', roster: [{ id: 'host', ...me(), score: 0 }], started: false, idx: 0 };
+  peer.on('open', () => { NET.ready = true; netErr(''); setupUI(); });
+  peer.on('error', e => {
+    if (e.type === 'peer-unavailable') return;
+    const retry = e.type === 'unavailable-id';
+    netFail(retry ? '' : 'No se ha podido crear la sala. Comprueba la conexión e inténtalo otra vez.');
+    if (retry) $('create').click();
+  });
+  peer.on('connection', conn => {
+    conn.on('data', m => hostMsg(conn, m));
+    conn.on('close', () => hostDrop(conn.peer));
+  });
+};
+
+function hostMsg(conn, m) {
+  if (!NET || NET.role !== 'host' || !m) return;
+  if (m.t === 'join') {
+    if (NET.started || NET.roster.length >= COLORS.length) { conn.send({ t: 'no', why: NET.started ? 'La partida ya ha empezado.' : 'La sala está llena.' }); return; }
+    NET.conns.set(conn.peer, conn);
+    NET.roster.push({ id: conn.peer, name: String(m.name || 'Jugador').slice(0, 14), level: [1, 2, 3].includes(m.level) ? m.level : 2, score: 0 });
+    broadcast({ t: 'lobby', roster: NET.roster });
+    setupUI();
+  } else if (m.t === 'res' && NET.started && m.idx === NET.idx) {
+    const p = NET.roster.find(r => r.id === conn.peer);
+    if (!p || p.done) return;
+    p.a = !!m.a; p.m = !!m.m;
+    p.score += 2 * p.a + p.m;
+    p.done = true;
+    afterResult();
+  }
+}
+function hostDrop(id) {
+  if (!NET || NET.role !== 'host') return;
+  NET.conns.delete(id);
+  if (!NET.started) { NET.roster = NET.roster.filter(r => r.id !== id); broadcast({ t: 'lobby', roster: NET.roster }); setupUI(); }
+  else { const p = NET.roster.find(r => r.id === id); if (p) p.gone = true; if (!NET.ended) afterResult(); }
+}
+
+$('joinform').onsubmit = e => {
+  e.preventDefault();
+  if (NET) return;
+  const code = $('code').value.trim().toUpperCase();
+  if (code.length !== 4) return netErr('Escribe el código de 4 letras de la sala.');
+  if (typeof Peer === 'undefined') return netErr('No se ha podido cargar el módulo de conexión. Comprueba internet y recarga.');
+  netErr('Entrando en la sala…');
+  const peer = new Peer();
+  NET = { role: 'guest', peer, code, roster: [] };
+  peer.on('open', id => {
+    NET.myId = id;
+    const conn = NET.conn = peer.connect(ROOM + code, { reliable: true });
+    conn.on('open', () => conn.send({ t: 'join', ...me() }));
+    conn.on('data', guestMsg);
+    conn.on('close', () => { if (NET && !NET.ended) netFail('Se ha perdido la conexión con la sala.'); });
+  });
+  peer.on('error', err => netFail(err.type === 'peer-unavailable' ? 'No existe ninguna sala con ese código.' : 'No se ha podido conectar. Comprueba la conexión e inténtalo otra vez.'));
+};
+
+function guestMsg(m) {
+  if (!NET || NET.role !== 'guest' || !m) return;
+  if (m.t === 'lobby') { NET.roster = m.roster; NET.ready = true; netErr(''); setupUI(); }
+  else if (m.t === 'no') netFail(m.why);
+  else if (m.t === 'q') onlineQuestion(m);
+  else if (m.t === 'scores') { if (G && G.net) applyRoster(m.roster); }
+  else if (m.t === 'round') { if (G && G.net && m.idx === G.round) roundResults(m.roster); }
+  else if (m.t === 'end') { NET.ended = true; endOnline(m.roster); }
+}
+
+function startOnline() {
+  if (NET.role !== 'host' || NET.started) return;
+  NET.started = true;
+  Object.assign(NET, { mode: radio('mode'), total: +radio('rounds'), time: +radio('time'), used: new Set(), idx: 0, shown: 0, level: NET.roster[0].level });
+  goNext(0);
+}
+// La misma pregunta y las mismas 10 opciones para todos, del nivel de quien crea la sala
+function hostPick() {
+  const type = NET.mode === 'mix' ? (Math.random() < .5 ? 'cap' : 'pais') : NET.mode;
+  const pool = EU.filter(d => d.nivel <= NET.level);
+  let fresh = pool.filter(d => !NET.used.has(d.id));
+  if (!fresh.length) { NET.used.clear(); fresh = pool; }
+  const item = fresh[Math.floor(Math.random() * fresh.length)];
+  NET.used.add(item.id);
+  const opts = shuffle([item, ...shuffle(pool.filter(d => d !== item)).slice(0, 9)]).map(d => d.id);
+  return { type, item: item.id, opts };
+}
+function goNext(from) {
+  if (!NET || NET.role !== 'host' || NET.idx !== from || NET.ended) return;
+  clearTimeout(NET.adv);
+  if (NET.idx >= NET.total) { NET.ended = true; broadcast({ t: 'end', roster: NET.roster }); return endOnline(NET.roster); }
+  NET.idx++;
+  NET.roster.forEach(r => { r.done = false; r.a = r.m = false; });
+  const m = { t: 'q', idx: NET.idx, total: NET.total, time: NET.time, ...hostPick(), roster: NET.roster };
+  broadcast(m);
+  onlineQuestion(m);
+}
+function afterResult() {
+  broadcast({ t: 'scores', roster: NET.roster });
+  if (G && G.net) applyRoster(NET.roster);
+  if (NET.started && NET.roster.every(r => r.done || r.gone)) showRound();
+}
+// Fin de la ronda: enseña a todos quién ha acertado y pasa sola a la siguiente
+function showRound() {
+  if (NET.shown === NET.idx) return;
+  const i = NET.shown = NET.idx;
+  broadcast({ t: 'round', idx: i, roster: NET.roster });
+  roundResults(NET.roster);
+  clearTimeout(NET.adv);
+  NET.adv = setTimeout(() => goNext(i), 7000);
+}
+// Ranking tras cada pregunta; en sala indica además quién ha acertado la respuesta y el mapa
+function ranking(players, marks) {
+  const rank = players.filter(p => !p.gone).sort((a, b) => b.score - a.score), top = Math.max(1, rank[0].score);
+  const mark = (ok, t) => `<span class="${ok ? 'y' : 'n'}">${ok ? '✓' : '✗'} ${t}</span>`;
+  let pos = 0;
+  $('round').innerHTML = rank.map((p, i) => {
+    if (i && p.score < rank[i - 1].score) pos = i;
+    const detail = !marks ? '' : p.done ? mark(p.a, 'respuesta') + mark(p.m, 'mapa') + `<span class="gain">+${2 * p.a + p.m}</span>` : '<span class="n">sin responder</span>';
+    return `<li style="--pc:${p.color};--w:${Math.round(100 * p.score / top)}%"><span class="pos">${['🥇', '🥈', '🥉'][pos] || pos + 1}</span><b>${p.av} ${esc(p.name)}</b>${detail}<span class="p">${p.score}</span></li>`;
+  }).join('');
+}
+function confetti(n) {
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  for (let i = 0; i < n; i++) {
+    const s = document.createElement('i');
+    s.className = 'cf';
+    s.style.cssText = `left:${Math.random() * 100}vw;background:${COLORS[i % COLORS.length]};animation-duration:${1.2 + Math.random() * 1.3}s;animation-delay:${Math.random() * .3}s`;
+    document.body.appendChild(s);
+    setTimeout(() => s.remove(), 3300);
+  }
+}
+function hostContinue() { if (NET.shown === NET.idx) goNext(NET.idx); else showRound(); }
+function roundResults(roster) {
+  if (G.step !== 'done') {   // a quien no ha terminado se le cierra la pregunta
+    clearTimeout(G.timer);
+    G.answered = true; G.step = 'done';
+    $('map').classList.remove('pick');
+    $('play').classList.add('done');
+    $('mapq').classList.add('hidden');
+    [...$('opts').children].forEach(b => b.disabled = true);
+    $('fb').textContent = `Se acabó la ronda. ${G.cur.item.capital} es la capital de ${G.cur.item.pais}.`;
+    $('fb').className = 'fb bad';
+  }
+  applyRoster(roster);
+  ranking(G.players, true);
+  const last = G.round >= G.rounds;
+  $('wait').textContent = last ? 'Resultados finales en unos segundos…' : 'Siguiente pregunta en unos segundos…';
+  $('wait').classList.remove('hidden');
+  if (NET.role === 'host') { $('next').textContent = last ? 'Ver resultados' : 'Siguiente pregunta'; $('next').classList.remove('hidden'); }
+  reveal($('round'), 'center');
+}
+
+function applyRoster(roster) {
+  G.players = roster.map((r, i) => ({ ...r, color: COLORS[i % COLORS.length], av: AV[i % AV.length] }));
+  G.turn = G.players.findIndex(p => p.id === NET.myId);
+  renderScores();
+}
+function onlineQuestion(m) {
+  if (!G || !G.net) {
+    G = { net: true, players: [], rounds: m.total, time: m.time, round: m.idx, turn: 0, used: new Set(), answered: true, timer: null, cur: null };
+    show('game');
+  }
+  G.round = m.idx;
+  applyRoster(m.roster);
+  nextQuestion({ item: BYID.get(m.item), type: m.type, opts: m.opts });
+}
+function onlineDone() {
+  $('wait').textContent = 'Esperando a los demás…';
+  $('wait').classList.remove('hidden');
+  if (NET.role === 'host') {
+    const p = NET.roster[0];
+    p.score += G.qpts; p.done = true; p.a = G.qa; p.m = G.qm;
+    $('next').textContent = 'Continuar sin esperar';
+    $('next').classList.remove('hidden');
+    afterResult();
+  } else if (NET.conn.open) NET.conn.send({ t: 'res', idx: G.round, a: G.qa, m: G.qm });
+}
+function endOnline(roster) {
+  clearTimeout(G.timer);
+  G.answered = true; G.step = 'done';
+  applyRoster(roster);
+  finish();
+}
+
+$('copy').onclick = async () => {
+  const url = location.origin + location.pathname + '?sala=' + NET.code;
+  try { await navigator.clipboard.writeText(url); $('copy').textContent = 'Enlace copiado'; }
+  catch (e) { prompt('Copia este enlace:', url); }
+  setTimeout(() => $('copy').textContent = 'Copiar enlace de la sala', 2000);
+};
+$('leave').onclick = () => { leaveRoom(); netErr(''); };
+
+try { const y = JSON.parse(localStorage.getItem('capitales-yo')); if (y) { $('myname').value = String(y.name || ''); $('mylevel').value = +y.level || 2; } } catch (e) {}
+const sala = (new URLSearchParams(location.search).get('sala') || '').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4);
+if (sala) { document.querySelector('input[name=play][value=online]').checked = true; $('code').value = sala; }
+setupUI();
+</script>
+</body>
+</html>
